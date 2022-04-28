@@ -1,40 +1,50 @@
-import QtQuick 2.15
+import QtQuick 2.12
 
+//=====================================================================
+// Rectange that can be Drag and Drop. Can be used without some settings
+//=====================================================================
 
 Rectangle {
     id: rect
 
-    property int _height: 100
-
     property int _index: index
     property int _spacing: 10
+
+//=====================================================================
+// Orientation of List where DroppableRect is used. By default: vertical
+//=====================================================================
+
+    property bool orientation: true
+
+    readonly property bool horizontal: false
+    readonly property bool vertical: true
 
     property color _hoverBorderColor: "#b8eef5"
     property int _hoverBorderWidth: 6
 
+//=====================================================================
+
+    property color _borderColor: "transparent"
+    property int _borderWidth: 0
+
+    property int oldX: -1
+
     signal doubleClicked(var index)
     signal released(var index)
     signal dropped(var srcIndex, var destIndex)
+    signal pressAndHold(var index)
 
-    property color _instantBorderColor: color_accent
-    property int _instantBorderWidth: 2
+    border.color: _borderColor
+    border.width: _borderWidth
 
-    property color color_base: "#ffffff"
-    property color color_accent: "#00ff00"
-    property color color_hover: "#caffcf"
-    property color color_press: "#74ff7f"
-
-    border.color: color_accent
-    border.width: 2
-
-    color: area.containsPress ? color_press : area.containsMouse ? color_hover : color_base
+    on_IndexChanged: {
+        oldX = -1;
+    }
 
     MouseArea {
         id: area
         anchors.fill: parent
         hoverEnabled: true
-
-        property double _k: 0.8
 
         onDoubleClicked: {
             rect.doubleClicked(index);
@@ -44,18 +54,43 @@ Rectangle {
             rect.released(index);
         }
 
+        onPressAndHold: {
+            rect.pressAndHold(index);
+        }
+
         drag.target: rect
 
         drag.onActiveChanged: {
             dropA.enabled = !dropA.enabled;
             rect.Drag.drop();
-            rect.z = 2;
 
+            // If you drop item
             if (dropA.enabled)
             {
-                rect.x = 0;
                 rect.z = 1;
-                rect.y = index * (rect.height + rect._spacing);
+                rect.width += 20;
+                rect.height += 10
+
+                // If orientation is vertical
+                if (rect.orientation)
+                {
+                    rect.x = 0;
+                    rect.y = index * (rect.height + rect._spacing);
+                }
+                else
+                // If orientation is horizontal
+                {
+                    rect.y = 0;
+                    if (rect.oldX >= 0) rect.x = rect.oldX;
+                }
+            }
+            // If you drag item
+            else
+            {
+                rect.z = 2;
+                rect.oldX = rect.x;
+                rect.width -= 20;
+                rect.height -= 10
             }
         }
     }
@@ -70,13 +105,13 @@ Rectangle {
         }
 
         onExited: {
-            rect.border.color = color_accent;
-            rect.border.width = 2;
+            rect.border.color = rect._borderColor;
+            rect.border.width = rect._borderWidth;
         }
 
         onDropped: {
-            rect.border.color = color_accent;
-            rect.border.width = 2;
+            rect.border.color = rect._borderColor;
+            rect.border.width = rect._borderWidth;
             rect.dropped(drop.source._index, index);
         }
     }
